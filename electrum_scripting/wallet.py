@@ -1,7 +1,8 @@
 import os
 import sys
 import warnings
-
+import qrcode
+import qrcode.image.svg
 
 MIN_PYTHON_VERSION = "3.6.1"  # FIXME duplicated from setup.py
 _min_python_version_tuple = tuple(map(int, (MIN_PYTHON_VERSION.split("."))))
@@ -19,6 +20,7 @@ def check_imports():
         import ecdsa
         import certifi
         import qrcode
+        import qrcode.image.svg
         import google.protobuf
         import jsonrpclib
         import aiorpcx
@@ -41,11 +43,13 @@ from electrum import constants
 from electrum import SimpleConfig
 from electrum.wallet import Wallet
 from electrum.storage import WalletStorage, get_derivation_used_for_hw_device_encryption
-from electrum.util import print_msg, print_stderr, json_encode, json_decode, UserCancelled
+from electrum.util import print_msg, print_stderr, json_encode, json_decode, UserCancelled, bfh
 from electrum.util import InvalidPassword
 from electrum.commands import get_parser, known_commands, Commands, config_variables
 from electrum import daemon
 from electrum import keystore
+from electrum.transaction import Transaction
+from electrum.bitcoin import base_encode
 
 _logger = get_logger(__name__)
 
@@ -229,34 +233,40 @@ def init_plugins(config, gui_name):
 
 
 class WalletScripting(object):
+    # Default configurations, overwrite from setup or call
+    config_options = {
+        'verbosity': '',
+        'verbosity_shortcuts': '',
+        'portable': False,
+        'testnet': False,
+        'regtest': False,
+        'simnet': False,
+        'cwd': os.getcwd()
+    }
+
     @classmethod
-    def setup(cls):
-        pass
+    def setup(cls, **kwargs):
+        cls.config_options.update(kwargs)
 
     @classmethod
     def call(cls, command, *args, **kwargs):
         # command line
         config_options = {
-            'verbosity': '',
-            'verbosity_shortcuts': '',
-            'portable': False,
-            'testnet': False,
-            'regtest': False,
-            'simnet': False,
             'cmd': command
         }
-        config_options['cwd'] = os.getcwd()
+        config_options.update(cls.config_options)
+        config_options.update(kwargs)
+
+        # print(config_options)
         config = SimpleConfig(config_options)
         cmdname = config.get('cmd')
 
         server = daemon.get_server(config)
         init_cmdline(config_options, server)
+
         if server is not None:
-            print("goes online")
             result = server.run_cmdline(config_options)
-            print(result)
         else:
-            print("goes offline")
             cmd = known_commands[cmdname]
             if cmd.requires_network:
                 print_msg("Daemon not running; try 'electrum daemon start'")
@@ -264,6 +274,21 @@ class WalletScripting(object):
             else:
                 plugins = init_plugins(config, 'cmdline')
                 result = run_offline_command(config, config_options, plugins)
-                print(result)
+
+        return result
+
+    @classmethod
+    def qr(cls, tx, filename):
+        if type(tx) == dict and 'hex' in tx:
+            tx = tx['hex']
+        tx = Transaction(tx)
+        text = bfh(str(tx))
+        text = base_encode(text, base=43)
+        img = qrcode.make(text, image_factory=qrcode.image.svg.SvgPathImage)
+
+        img.save(filename)
+        print("QR Image saved as " + filename)
+
+
 
 
