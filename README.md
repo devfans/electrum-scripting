@@ -30,7 +30,8 @@ python3 -m pip install electrum-scripting
 
 ## Get Started
 
-```python
+```
+
 > from electrum_scripting.wallet import WalletScripting as ws
 
 # Call electrum command

@@ -2,5 +2,5 @@ language: python
 cache: pip
 python:
   - "3.6"
-  - "3.5"
+  - "3.7"
 script: python setup.py build
