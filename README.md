@@ -49,7 +49,7 @@ python3 -m pip install electrum-scripting
 
 ```
 
-For full supported command list, please check eletrum documentation. Here's listing for your information:
+For full supported command list, please check electrum documentation. Here's listing for your information:
 
     addrequest          Create a payment request, using the first unused
                         address of the wallet
