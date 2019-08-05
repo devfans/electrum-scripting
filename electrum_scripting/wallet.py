@@ -278,7 +278,7 @@ class WalletScripting(object):
         return result
 
     @classmethod
-    def qr(cls, tx, filename):
+    def qr(cls, tx, filename=None):
         if type(tx) == dict and 'hex' in tx:
             tx = tx['hex']
         tx = Transaction(tx)
@@ -286,8 +286,10 @@ class WalletScripting(object):
         text = base_encode(text, base=43)
         img = qrcode.make(text, image_factory=qrcode.image.svg.SvgPathImage)
 
-        img.save(filename)
-        print("QR Image saved as " + filename)
+        if filename is not None:
+            img.save(filename)
+            print("QR Image saved as " + filename)
+        return img
 
 
 
